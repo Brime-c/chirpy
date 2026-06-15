@@ -9,7 +9,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.Handle("/", http.FileServer(http.Dir(".")))
-
+	mux.HandleFunc(http.ResponseWriter, *http.Request)
 	myServer := &http.Server{
 		Addr:    ":8080",
 		Handler: mux,
