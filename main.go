@@ -17,13 +17,13 @@ func main() {
 	fileServer := http.FileServer(http.Dir("."))
 	prefixed := http.StripPrefix("/app", fileServer)
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(prefixed))
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(200)
 		w.Write([]byte("OK"))
 	})
-	mux.HandleFunc("/metrics", apiCfg.handlerNumberResponse)
-	mux.HandleFunc("/reset", apiCfg.handlerReset)
+	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
+	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
 	myServer := &http.Server{
 		Addr:    ":8080",
 		Handler: mux,
