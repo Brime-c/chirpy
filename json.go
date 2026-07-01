@@ -6,17 +6,23 @@ import (
 	"net/http"
 )
 
+func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+	js, err := json.Marshal(payload)
+	if err != nil {
+		log.Fatal(err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	w.Write(js)
+}
+
 func respondWithError(w http.ResponseWriter, code int, msg string) {
-	type parameters struct {
-		Body string `json:"body"`
+	type Response struct {
+		Error string `json:"error"`
+	}
+	respErr := Response{
+		Error: msg,
 	}
 
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	err := decoder.Decode(&params)
-	if err != nil {
-		log.Printf("Error decoding parameters: %s", err)
-		w.WriteHeader(500)
-		return
-	}
+	respondWithJSON(w, code, respErr)
 }
