@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"sync/atomic"
@@ -21,6 +22,29 @@ func main() {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(200)
 		w.Write([]byte("OK"))
+	})
+	mux.HandleFunc("POST /api/validate_chirp", func(w http.ResponseWriter, r *http.Request) {
+		type response struct {
+			Body string `json:"body"`
+		}
+		decoder := json.NewDecoder(r.Body)
+		resp := response{}
+		err := decoder.Decode(&resp)
+		if err != nil {
+			respondWithError(w, 500, "Something went wrong")
+			return
+		}
+		if len(resp.Body) > 140 {
+			respondWithError(w, 400, "Chirp is too long")
+			return
+		}
+		type validate struct {
+			Valid bool `json:"valid"`
+		}
+		val := validate{
+			Valid: true,
+		}
+		respondWithJSON(w, 200, val)
 	})
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
