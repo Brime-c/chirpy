@@ -38,11 +38,13 @@ func main() {
 			respondWithError(w, 400, "Chirp is too long")
 			return
 		}
-		type validate struct {
-			Valid bool `json:"valid"`
+		cleanedBody := getCleanedBody(resp.Body)
+
+		type returnVals struct {
+			CleanedBody string `json:"cleaned_body"`
 		}
-		val := validate{
-			Valid: true,
+		val := returnVals{
+			CleanedBody: cleanedBody,
 		}
 		respondWithJSON(w, 200, val)
 	})
