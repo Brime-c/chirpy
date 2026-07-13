@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"os"
 	"sync/atomic"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
@@ -16,6 +18,13 @@ import (
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	dbqueries      database.Queries
+	platform       string
+}
+type User struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
 }
 
 func main() {
@@ -28,6 +37,7 @@ func main() {
 	dbQueries := database.New(db)
 	var apiCfg apiConfig
 	apiCfg.dbqueries = *dbQueries
+	apiCfg.platform = os.Getenv("PLATFORM")
 	mux := http.NewServeMux()
 
 	fileServer := http.FileServer(http.Dir("."))
@@ -62,6 +72,31 @@ func main() {
 			CleanedBody: cleanedBody,
 		}
 		respondWithJSON(w, 200, val)
+	})
+	mux.HandleFunc("POST /api/users", func(w http.ResponseWriter, r *http.Request) {
+		type Request struct {
+			Email string `json:"email"`
+		}
+		decoder := json.NewDecoder(r.Body)
+		req := Request{}
+		err := decoder.Decode(&req)
+		if err != nil {
+			w.WriteHeader(500)
+			return
+		}
+
+		user, err := dbQueries.CreateUser(r.Context(), req.Email)
+		if err != nil {
+			w.WriteHeader(500)
+			return
+		}
+		newUser := User{
+			ID:        user.ID,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+			Email:     user.Email,
+		}
+		respondWithJSON(w, 201, newUser)
 	})
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)

@@ -19,6 +19,15 @@ func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
+	if cfg.platform != "dev" {
+		w.WriteHeader(403)
+		return
+	}
 	cfg.fileserverHits.Store(0)
-	w.Write([]byte("count reset"))
+	err := cfg.dbqueries.DeleteUsers(r.Context())
+	if err != nil {
+		w.WriteHeader(500)
+		return
+	}
+	w.Write([]byte("database reset"))
 }
