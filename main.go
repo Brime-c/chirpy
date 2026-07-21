@@ -26,6 +26,13 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
 }
+type Chirp struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	UserID    uuid.UUID `json:"user_id"`
+}
 
 func main() {
 	godotenv.Load()
@@ -76,7 +83,8 @@ func main() {
 	})
 	mux.HandleFunc("POST /api/chirps", func(w http.ResponseWriter, r *http.Request) {
 		type response struct {
-			Body string `json:"body"`
+			Body   string    `json:"body"`
+			UserID uuid.UUID `json:"user_id"`
 		}
 		decoder := json.NewDecoder(r.Body)
 		resp := response{}
@@ -91,13 +99,19 @@ func main() {
 		}
 		cleanedBody := getCleanedBody(resp.Body)
 
-		type returnVals struct {
-			CleanedBody string `json:"cleaned_body"`
+		chirp, err := dbQueries.CreateChirp(r.Context(), database.CreateChirpParams{Body: cleanedBody, UserID: resp.UserID})
+		if err != nil {
+			respondWithError(w, 500, "error trying to create chirp")
+			return
 		}
-		val := returnVals{
-			CleanedBody: cleanedBody,
+		newChirp := Chirp{
+			ID:        chirp.ID,
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
+			Body:      chirp.Body,
+			UserID:    chirp.UserID,
 		}
-		respondWithJSON(w, 200, val)
+		respondWithJSON(w, 201, newChirp)
 	})
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handlerMetrics)
 	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
